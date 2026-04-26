@@ -2,12 +2,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
+import re
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# 📦 CARICAMENTO ROBUSTO DATA
+# 📦 CARICAMENTO DATA
 # =========================
 data = []
 
@@ -16,7 +17,7 @@ if os.path.exists("data.json"):
         with open("data.json", "r", encoding="utf-8") as f:
             raw = json.load(f)
 
-        # 🔥 FORZA TUTTO A STRINGA
+        # normalizzazione robusta
         if isinstance(raw, list):
             data = [str(x) for x in raw]
         elif isinstance(raw, dict):
@@ -24,7 +25,7 @@ if os.path.exists("data.json"):
         else:
             data = [str(raw)]
 
-        print("DATA CARICATO OK:", len(data))
+        print("DATA CARICATO:", len(data))
 
     except Exception as e:
         print("ERRORE DATA.JSON:", e)
@@ -34,7 +35,25 @@ else:
 
 
 # =========================
-# 🔎 SEARCH SICURA (NO CRASH)
+# 🧹 PULIZIA TESTO (FONDAMENTALE)
+# =========================
+def clean(text):
+    text = str(text)
+
+    # rimuove HTML
+    text = re.sub(r"<[^>]*>", " ", text)
+
+    # rimuove caratteri strani
+    text = re.sub(r"&[a-zA-Z0-9#]+;", " ", text)
+
+    # spazi multipli
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+
+# =========================
+# 🔎 SEARCH
 # =========================
 def search(query):
     if not data:
@@ -62,7 +81,7 @@ def search(query):
 
 
 # =========================
-# 💬 CHAT (ULTRA SAFE)
+# 💬 CHAT API
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -76,11 +95,20 @@ def chat():
 
         results = search(user)
 
-        context = "\n\n".join(results) if results else "Nessun contenuto trovato."
+        # pulizia risultati
+        clean_results = [clean(r) for r in results]
 
-        return jsonify({
-            "reply": f"Basandomi sul sito:\n\n{context[:800]}"
-        })
+        context = "\n\n".join(clean_results) if clean_results else "Nessun contenuto trovato nel sito."
+
+        reply = f"""
+Basandomi sui contenuti del sito:
+
+{context[:1200]}
+
+👉 Vuoi che te lo spieghi in modo semplice?
+"""
+
+        return jsonify({"reply": reply})
 
     except Exception as e:
         print("CHAT ERROR:", e)
