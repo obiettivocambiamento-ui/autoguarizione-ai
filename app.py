@@ -1,102 +1,98 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json, os, re
+import json
+import os
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# CARICA DATI
+# CARICA KNOWLEDGE
 # =========================
-data = []
+with open("knowledge.json", "r", encoding="utf-8") as f:
+    knowledge = json.load(f)
 
-if os.path.exists("data.json"):
-    with open("data.json", "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-print("PAGINE:", len(data))
+print("KNOWLEDGE CARICATO:", len(knowledge))
 
 
 # =========================
-# PULIZIA TESTO SERIA
+# TROVA CONTENUTO MIGLIORE
 # =========================
-def clean_text(text):
+def get_context(user_question):
+    q = user_question.lower()
 
-    # rimuovi roba inutile
-    text = re.sub(r"cookie|consenso|privacy.*", "", text, flags=re.I)
+    best = None
+    best_score = 0
 
-    # togli caratteri strani
-    text = re.sub(r"\s+", " ", text)
+    for item in knowledge:
+        score = sum(1 for w in item["topic"].split() if w in q)
 
-    # taglia lunghezza
-    return text[:800]
+        if score > best_score:
+            best = item
+            best_score = score
 
+    if best:
+        return best["content"]
 
-# =========================
-# RICERCA MIGLIORATA
-# =========================
-def search(query):
-
-    q_words = query.lower().split()
-    results = []
-
-    for page in data:
-        text = page.get("text", "").lower()
-
-        score = sum(1 for w in q_words if w in text)
-
-        if score > 0:
-            results.append((score, page))
-
-    results.sort(reverse=True, key=lambda x: x[0])
-
-    return [r[1] for r in results[:3]]
+    return "Non ho informazioni specifiche su questo argomento nel sito."
 
 
 # =========================
-# RISPOSTA INTELLIGENTE BASE
+# 🧠 AI (HUGGING FACE FREE)
 # =========================
-def build_answer(results):
+API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
-    if not results:
-        return "Non ho trovato informazioni precise su questo nel sito."
+def ask_ai(question, context):
 
-    answers = []
+    prompt = f"""
+Sei un assistente del sito autoguarizione.it.
 
-    for r in results:
-        text = clean_text(r.get("text", ""))
-        answers.append(text)
+Usa queste informazioni:
 
-    # unisci ma separa bene
-    final = "\n\n---\n\n".join(answers[:2])
+{context}
 
-    return final
+Domanda: {question}
+
+Rispondi in modo chiaro, semplice e utile in italiano.
+"""
+
+    try:
+        response = requests.post(
+            API_URL,
+            json={"inputs": prompt},
+            timeout=20
+        )
+
+        data = response.json()
+
+        if isinstance(data, list):
+            return data[0].get("generated_text", "")
+
+        return "Errore AI"
+
+    except Exception as e:
+        print("ERRORE AI:", e)
+        return context  # fallback intelligente
 
 
 # =========================
-# CHAT
+# CHAT ENDPOINT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        req = request.get_json()
-        user = req.get("message", "")
+        data = request.get_json()
+        user = data.get("message", "")
 
-        results = search(user)
-        answer = build_answer(results)
+        context = get_context(user)
+        answer = ask_ai(user, context)
 
-        reply = f"""Ecco cosa ho trovato nel sito:
-
-{answer}
-
-👉 Vuoi che ti riassuma meglio questo contenuto?
-"""
-
-        return jsonify({"reply": reply})
+        return jsonify({"reply": answer})
 
     except Exception as e:
         print("ERRORE:", e)
-        return jsonify({"reply": "Errore interno"}), 500
+        return jsonify({"reply": "Errore server"}), 500
 
 
 # =========================
