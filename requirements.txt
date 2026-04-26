@@ -1,6 +1,4 @@
 flask
 flask-cors
 requests
-numpy
-faiss-cpu
-sentence-transformers
+scikit-learn

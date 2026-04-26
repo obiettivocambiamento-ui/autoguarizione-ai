@@ -1,14 +1,62 @@
 [
   {
-    "text": "Le proposte includono percorsi di consapevolezza, strumenti pratici e crescita personale."
+    "topic": "home",
+    "text": "Il sito presenta un percorso di crescita personale basato su consapevolezza, trasformazione e auto-osservazione. L'obiettivo è aiutare la persona a comprendere sé stessa e attivare un cambiamento interiore pratico e progressivo."
   },
   {
-    "text": "Le risorse gratuite includono guide, strumenti e materiali utili per il cambiamento personale."
+    "topic": "proposte",
+    "text": "Le proposte includono percorsi di sviluppo personale, strumenti di consapevolezza, attività guidate e contenuti per migliorare il rapporto tra mente, emozioni e azione nella vita quotidiana."
   },
   {
-    "text": "L’analisi della personalità aiuta a comprendere schemi emotivi e comportamentali."
+    "topic": "percorso",
+    "text": "Il percorso è strutturato in fasi progressive: osservazione, risveglio, trasformazione, integrazione e autonomia. Ogni fase rappresenta un livello di consapevolezza e cambiamento personale."
   },
   {
-    "text": "Il sito offre un percorso basato su osservazione, consapevolezza e trasformazione personale."
+    "topic": "analisi",
+    "text": "L'analisi riguarda la comprensione dei propri schemi mentali ed emotivi. Serve a individuare blocchi, comportamenti ripetitivi e dinamiche inconsce che influenzano la vita della persona."
+  },
+  {
+    "topic": "heart-bed",
+    "text": "È uno strumento o percorso legato all'equilibrio energetico e alla percezione interiore del corpo e delle emozioni, orientato al benessere e alla consapevolezza corporea."
+  },
+  {
+    "topic": "biorisonanza",
+    "text": "La biorisonanza è descritta come una tecnologia energetica che lavora sulle frequenze del corpo per riequilibrare stati di stress, emozioni e benessere generale. Viene presentata come metodo di armonizzazione personale."
+  },
+  {
+    "topic": "nutrizione",
+    "text": "La nutrizione viene trattata in modo olistico, includendo non solo il cibo ma anche il rapporto emotivo e mentale con l'alimentazione, con attenzione a equilibrio e consapevolezza."
+  },
+  {
+    "topic": "cristo",
+    "text": "Il contenuto è legato a una visione simbolica e spirituale della coscienza e dell'evoluzione interiore, interpretata come percorso di risveglio e trasformazione personale."
+  },
+  {
+    "topic": "valore",
+    "text": "Il valore è collegato alla crescita personale e alla consapevolezza individuale, con attenzione al significato dell'esperienza e alla trasformazione interiore."
+  },
+  {
+    "topic": "economia del dono",
+    "text": "L'economia del dono è una visione in cui lo scambio non è basato solo sul denaro ma su reciprocità, valore umano e contributo consapevole alla comunità."
+  },
+  {
+    "topic": "mappa coscienza",
+    "text": "La mappa della coscienza rappresenta livelli evolutivi della consapevolezza umana, descrivendo stati mentali ed emotivi che indicano crescita o blocco interiore."
+  },
+  {
+    "topic": "harmony",
+    "text": "Harmony è un concetto legato all'equilibrio tra mente, corpo ed emozioni, orientato a riportare armonia interiore attraverso pratiche di consapevolezza."
+  },
+  {
+    "topic": "trattamento hr",
+    "text": "È un tipo di percorso o trattamento orientato alla regolazione energetica e al benessere psicofisico attraverso approcci integrati."
+  },
+  {
+    "topic": "risorse",
+    "text": "Le risorse includono materiali gratuiti, guide, strumenti e contenuti utili per il percorso di crescita personale e consapevolezza."
+  },
+  {
+    "topic": "principi generali",
+    "text": "Il sito si basa su un modello di trasformazione personale che integra osservazione, consapevolezza, cambiamento e autonomia come fasi di evoluzione individuale."
   }
 ]

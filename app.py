@@ -1,117 +1,132 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import requests
 import json
-import os
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# CONFIG LLM (FREE HUGGINGFACE)
+# CONFIG AI ESTERNA (Gemini)
 # =========================
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+GEMINI_KEY = "INSERISCI_LA_TUA_API_KEY"
 
-# Se vuoi puoi aggiungere token HuggingFace qui (opzionale)
-HF_TOKEN = os.getenv("HF_TOKEN", "")
-
-headers = {}
-if HF_TOKEN:
-    headers["Authorization"] = f"Bearer {HF_TOKEN}"
-
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/"
+    "models/gemini-pro:generateContent"
+)
 
 # =========================
-# CARICA CONOSCENZA SITO (OPZIONALE)
+# CARICA KNOWLEDGE
 # =========================
-try:
-    with open("knowledge.json", "r", encoding="utf-8") as f:
-        knowledge = json.load(f)
-    SITE_TEXT = "\n".join([k["text"] for k in knowledge])
-except:
-    SITE_TEXT = "Il sito tratta percorsi di consapevolezza e crescita personale."
+with open("knowledge.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+texts = [x["text"] for x in data]
+
+vectorizer = TfidfVectorizer()
+matrix = vectorizer.fit_transform(texts)
 
 
 # =========================
-# FUNZIONE AI
+# RICERCA LOCALE (VELOCE)
 # =========================
-def generate_answer(user_message):
+def local_search(query):
 
-    prompt = f"""
-Sei un assistente virtuale del sito autoguarizione.it.
+    q_vec = vectorizer.transform([query])
+    scores = cosine_similarity(q_vec, matrix)[0]
 
-Devi rispondere in modo:
-- naturale
-- umano
-- semplice
-- conversazionale
-- NON copiare testi lunghi
+    best = scores.argmax()
+    score = scores[best]
 
-CONTESTO DEL SITO:
-{SITE_TEXT}
+    if score < 0.25:
+        return None
 
-DOMANDA UTENTE:
-{user_message}
+    return texts[best]
 
-RISPOSTA:
-"""
+
+# =========================
+# AI ESTERNA (FALLBACK INTELLIGENTE)
+# =========================
+def call_ai(user_message):
 
     try:
-        response = requests.post(
-            API_URL,
-            headers=headers,
-            json={
-                "inputs": prompt,
-                "parameters": {
-                    "max_new_tokens": 250,
-                    "temperature": 0.7,
-                    "return_full_text": False
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": user_message}]
                 }
-            },
-            timeout=40
+            ]
+        }
+
+        r = requests.post(
+            GEMINI_URL + "?key=" + GEMINI_KEY,
+            json=payload,
+            timeout=20
         )
 
-        data = response.json()
+        data = r.json()
 
-        # parsing robusto HF
-        if isinstance(data, list) and len(data) > 0:
-            if "generated_text" in data[0]:
-                return data[0]["generated_text"]
-
-            return data[0].get("generated_text", str(data[0]))
-
-        return str(data)
+        return (
+            data["candidates"][0]["content"]["parts"][0]["text"]
+        )
 
     except Exception as e:
-        print("ERROR:", e)
-        return "Sto avendo un problema a generare la risposta in questo momento."
+        print("AI ERROR:", e)
+        return None
 
 
 # =========================
-# CHAT ENDPOINT
+# FORMAT RISPOSTA
+# =========================
+def format_text(text):
+
+    return f"""Ti rispondo in modo chiaro 😊
+
+{text}
+
+Se vuoi posso approfondire meglio."""
+
+
+# =========================
+# CHAT PRINCIPALE
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
 
-    data = request.get_json()
-    user_message = data.get("message", "")
+    user = request.json.get("message", "")
 
-    reply = generate_answer(user_message)
+    # 1️⃣ PROVA LOCALE
+    local = local_search(user)
 
+    if local:
+        return jsonify({
+            "reply": format_text(local),
+            "source": "local"
+        })
+
+    # 2️⃣ PROVA AI
+    ai = call_ai(user)
+
+    if ai:
+        return jsonify({
+            "reply": format_text(ai),
+            "source": "ai"
+        })
+
+    # 3️⃣ FALLBACK SICURO
     return jsonify({
-        "reply": reply
+        "reply": "Non ho trovato una risposta precisa, ma posso aiutarti a riformulare la domanda 😊",
+        "source": "fallback"
     })
 
 
-# =========================
-# HEALTH CHECK
-# =========================
 @app.route("/")
 def home():
-    return "AI voce pro attiva"
+    return "AI IBRIDA STABILE ATTIVA"
 
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
