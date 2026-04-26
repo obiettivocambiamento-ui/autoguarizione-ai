@@ -5,7 +5,7 @@ import os
 app = Flask(__name__)
 
 # =========================
-# 📦 CARICAMENTO DATI SICURO
+# 📦 CARICAMENTO DATA.JSON SICURO
 # =========================
 data = []
 
@@ -22,30 +22,32 @@ else:
 
 
 # =========================
-# 🔎 SEARCH SEMPLICE
+# 🔎 SEARCH MIGLIORATA
 # =========================
 def search(query):
     results = []
 
-    if not data:
-        return results
-
-    query_words = query.lower().split()
+    query = query.lower()
 
     for chunk in data:
         text = chunk.lower() if isinstance(chunk, str) else str(chunk).lower()
 
-        if any(word in text for word in query_words):
-            results.append(chunk)
+        score = 0
 
-        if len(results) >= 3:
-            break
+        for word in query.split():
+            if word in text:
+                score += 1
 
-    return results
+        if score > 0:
+            results.append((score, chunk))
+
+    results.sort(reverse=True, key=lambda x: x[0])
+
+    return [r[1] for r in results[:3]]
 
 
 # =========================
-# 🧠 MEMORIA CHAT (BASE)
+# 🧠 MEMORIA BASE
 # =========================
 memory = {}
 
@@ -70,6 +72,7 @@ def chat():
         memory[user_id].append(user)
 
         results = search(user)
+
         context = "\n\n".join(results) if results else "Nessun contenuto trovato nel sito."
 
         reply = f"""
@@ -95,7 +98,7 @@ def home():
 
 
 # =========================
-# 🚀 START SERVER (Render)
+# 🚀 START SERVER
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
