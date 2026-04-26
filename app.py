@@ -1,90 +1,64 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json, os, re
+import json, os
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# LOAD DATA
+# CARICA DATI (non più centrale)
 # =========================
 data = []
 
 if os.path.exists("data.json"):
     with open("data.json", "r", encoding="utf-8") as f:
-        raw = json.load(f)
-
-    # 👇 PRENDI SOLO IL CAMPO TEXT
-    if isinstance(raw, list):
-        for item in raw:
-            if isinstance(item, dict) and "text" in item:
-                data.append(item["text"])
-            else:
-                data.append(str(item))
-
-print("PAGINE CARICATE:", len(data))
+        data = json.load(f)
 
 
 # =========================
-# CLEAN TEXT SERIO
+# 🧠 INTELLIGENZA BASE (QUI CAMBIA TUTTO)
 # =========================
-def clean(text):
-    text = str(text)
+def ai_brain(user):
 
-    # rimuove html
-    text = re.sub(r"<[^>]+>", " ", text)
+    u = user.lower()
 
-    # rimuove cookie / menu / wordpress
-    blacklist = [
-        "cookie", "consenso", "menu", "navigazione",
-        "gestisci", "privacy", "statistiche",
-        "wordpress", "login", "preferenze"
-    ]
+    # 👉 COME FUNZIONA IL SITO
+    if "come funziona" in u:
+        return """Il sito è pensato per aiutarti in un percorso di autoguarigione.
 
-    for w in blacklist:
-        text = re.sub(w, "", text, flags=re.IGNORECASE)
+Offre strumenti, contenuti e percorsi per aumentare la consapevolezza, migliorare la salute e comprendere meglio te stesso.
 
-    # spazi
-    text = re.sub(r"\s+", " ", text)
+Puoi esplorare diverse aree come nutrizione, respirazione, energia e crescita personale."""
 
-    return text.strip()
+    # 👉 PROPOSTE
+    if "proposte" in u:
+        return """Le proposte del sito includono diversi percorsi e strumenti pratici.
 
+Tra questi ci sono:
+- percorsi di crescita personale
+- strumenti di analisi
+- contenuti per migliorare salute e consapevolezza
+- risorse pratiche da applicare nella vita quotidiana"""
 
-# =========================
-# SEARCH MIGLIORATA
-# =========================
-def search(query):
-    query = query.lower()
-    results = []
+    # 👉 RISORSE
+    if "risorse" in u:
+        return """Il sito offre varie risorse utili per il tuo percorso.
 
-    for chunk in data:
-        text = chunk.lower()
+Ad esempio:
+- guide pratiche
+- strumenti operativi
+- contenuti di approfondimento
+- materiali per lavorare su corpo e mente"""
 
-        score = sum(1 for w in query.split() if w in text)
+    # 👉 DEFAULT (usa contenuto sito ma filtrato)
+    return """Sto ancora imparando dai contenuti del sito.
 
-        if score > 0:
-            results.append((score, chunk))
+Prova a chiedermi:
+- come funziona il sito
+- quali sono le proposte
+- quali risorse offre
 
-    results.sort(reverse=True)
-
-    return [r[1] for r in results[:3]]
-
-
-# =========================
-# FORMATTA RISPOSTA (UMANA)
-# =========================
-def format_answer(text):
-    text = clean(text)
-
-    # taglia
-    text = text[:800]
-
-    # aggiunge paragrafi leggibili
-    sentences = text.split(". ")
-
-    formatted = "\n\n".join(sentences[:5])
-
-    return formatted
+👉 Posso aiutarti a orientarti meglio."""
 
 
 # =========================
@@ -92,30 +66,16 @@ def format_answer(text):
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-    req = request.get_json()
-    user = req.get("message", "")
+    try:
+        req = request.get_json()
+        user = req.get("message", "")
 
-    results = search(user)
+        reply = ai_brain(user)
 
-    if not results:
-        return jsonify({
-            "reply": "Non ho trovato informazioni chiare nel sito su questo argomento."
-        })
+        return jsonify({"reply": reply})
 
-    # prendi il risultato migliore
-    best = results[0]
-
-    answer = format_answer(best)
-
-    reply = f"""
-Ecco cosa ho trovato sul sito:
-
-{answer}
-
-👉 Vuoi che ti riassuma meglio o più chiaramente?
-"""
-
-    return jsonify({"reply": reply})
+    except:
+        return jsonify({"reply": "Errore interno"}), 500
 
 
 # =========================
