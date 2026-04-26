@@ -1,76 +1,117 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import json
 import os
 
 app = Flask(__name__)
 CORS(app)
 
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+# =========================
+# CONFIG LLM (FREE HUGGINGFACE)
+# =========================
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 
-HEADERS = {}
+# Se vuoi puoi aggiungere token HuggingFace qui (opzionale)
+HF_TOKEN = os.getenv("HF_TOKEN", "")
 
-def ask_ai(prompt):
+headers = {}
+if HF_TOKEN:
+    headers["Authorization"] = f"Bearer {HF_TOKEN}"
+
+
+# =========================
+# CARICA CONOSCENZA SITO (OPZIONALE)
+# =========================
+try:
+    with open("knowledge.json", "r", encoding="utf-8") as f:
+        knowledge = json.load(f)
+    SITE_TEXT = "\n".join([k["text"] for k in knowledge])
+except:
+    SITE_TEXT = "Il sito tratta percorsi di consapevolezza e crescita personale."
+
+
+# =========================
+# FUNZIONE AI
+# =========================
+def generate_answer(user_message):
+
+    prompt = f"""
+Sei un assistente virtuale del sito autoguarizione.it.
+
+Devi rispondere in modo:
+- naturale
+- umano
+- semplice
+- conversazionale
+- NON copiare testi lunghi
+
+CONTESTO DEL SITO:
+{SITE_TEXT}
+
+DOMANDA UTENTE:
+{user_message}
+
+RISPOSTA:
+"""
 
     try:
-        r = requests.post(
+        response = requests.post(
             API_URL,
-            headers=HEADERS,
-            json={"inputs": prompt},
-            timeout=25
+            headers=headers,
+            json={
+                "inputs": prompt,
+                "parameters": {
+                    "max_new_tokens": 250,
+                    "temperature": 0.7,
+                    "return_full_text": False
+                }
+            },
+            timeout=40
         )
 
-        data = r.json()
+        data = response.json()
 
-        # DEBUG sicuro
-        print("AI RESPONSE:", data)
+        # parsing robusto HF
+        if isinstance(data, list) and len(data) > 0:
+            if "generated_text" in data[0]:
+                return data[0]["generated_text"]
 
-        if isinstance(data, list) and "generated_text" in data[0]:
-            return data[0]["generated_text"]
-
-        if isinstance(data, dict) and "error" in data:
-            return "AI temporaneamente occupata, riprova"
+            return data[0].get("generated_text", str(data[0]))
 
         return str(data)
 
     except Exception as e:
-        print("AI ERROR:", e)
-        return "Errore AI temporaneo"
+        print("ERROR:", e)
+        return "Sto avendo un problema a generare la risposta in questo momento."
 
 
+# =========================
+# CHAT ENDPOINT
+# =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-    try:
-        data = request.get_json()
 
-        if not data or "message" not in data:
-            return jsonify({"reply": "Messaggio vuoto"}), 400
+    data = request.get_json()
+    user_message = data.get("message", "")
 
-        user_msg = data["message"]
+    reply = generate_answer(user_message)
 
-        prompt = f"""
-Sei un assistente del sito autoguarizione.it.
-Rispondi in italiano semplice e chiaro.
-
-Domanda: {user_msg}
-
-Risposta:
-"""
-
-        reply = ask_ai(prompt)
-
-        return jsonify({"reply": reply})
-
-    except Exception as e:
-        print("SERVER ERROR:", e)
-        return jsonify({"reply": "Errore server interno"}), 500
+    return jsonify({
+        "reply": reply
+    })
 
 
+# =========================
+# HEALTH CHECK
+# =========================
 @app.route("/")
 def home():
-    return "AI attiva"
+    return "AI voce pro attiva"
 
 
+# =========================
+# RUN
+# =========================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
