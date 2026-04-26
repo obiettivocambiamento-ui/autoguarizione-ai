@@ -2,128 +2,25 @@
   {
     "id": "home",
     "title": "Home",
-    "intent": ["home", "come funziona il sito", "cos'è il sito", "inizio"],
-    "content": "Il sito presenta un percorso di consapevolezza e trasformazione personale basato su osservazione, cambiamento e autonomia.",
+    "text": "Il sito presenta un percorso di trasformazione personale basato su consapevolezza, osservazione e cambiamento interiore.",
     "url": "https://www.autoguarizione.it/"
   },
-
   {
     "id": "proposte",
     "title": "Le mie proposte",
-    "intent": ["proposte", "cosa offre", "servizi", "cosa fa il sito", "offerta"],
-    "content": "Qui trovi i percorsi e servizi di crescita personale proposti dal sito.",
+    "text": "Percorsi, strumenti e servizi di crescita personale e consapevolezza.",
     "url": "https://www.autoguarizione.it/proposte/"
   },
-
   {
     "id": "percorso",
     "title": "Percorso",
-    "intent": ["percorso", "fasi", "come funziona il percorso"],
-    "content": "Il percorso è strutturato in fasi evolutive: risveglio, osservazione, trasformazione e autonomia.",
+    "text": "Fasi del percorso: risveglio, osservazione, trasformazione, autonomia.",
     "url": "https://www.autoguarizione.it/percorso/"
   },
-
-  {
-    "id": "analisi",
-    "title": "Analisi",
-    "intent": ["analisi", "analisi della personalità", "valutazione"],
-    "content": "Strumenti di analisi per comprendere schemi comportamentali e dinamiche personali.",
-    "url": "https://www.autoguarizione.it/analisi/"
-  },
-
-  {
-    "id": "heart-bed",
-    "title": "Heart Bed",
-    "intent": ["heart bed", "energia", "strumenti energetici"],
-    "content": "Strumento descritto come supporto energetico per riequilibrio e benessere.",
-    "url": "https://www.autoguarizione.it/heart-bed/"
-  },
-
-  {
-    "id": "biorisonanza",
-    "title": "Biorisonanza",
-    "intent": ["biorisonanza", "frequenze", "energia corpo"],
-    "content": "Approccio basato su frequenze e armonizzazione energetica del corpo.",
-    "url": "https://www.autoguarizione.it/biorisonanza/"
-  },
-
-  {
-    "id": "nutrizione",
-    "title": "Nutrizione",
-    "intent": ["nutrizione", "cibo", "alimentazione", "dieta"],
-    "content": "Approccio alla nutrizione legato al benessere fisico e consapevolezza alimentare.",
-    "url": "https://www.autoguarizione.it/nutrizione/"
-  },
-
-  {
-    "id": "cristo",
-    "title": "Cristo",
-    "intent": ["cristo", "spiritualità", "coscienza"],
-    "content": "Contenuti spirituali legati a coscienza e percorsi interiori.",
-    "url": "https://www.autoguarizione.it/cristo/"
-  },
-
-  {
-    "id": "valore",
-    "title": "Valore",
-    "intent": ["valore", "significato", "principi"],
-    "content": "Riflessioni sul valore personale e il significato dell’esperienza umana.",
-    "url": "https://www.autoguarizione.it/valore/"
-  },
-
-  {
-    "id": "economia-dono",
-    "title": "Economia circolare del dono",
-    "intent": ["dono", "economia", "circolare", "valore scambio"],
-    "content": "Modello basato su scambio consapevole e economia del dono.",
-    "url": "https://www.autoguarizione.it/economia-circolare-del-dono/"
-  },
-
-  {
-    "id": "mappa-coscienza",
-    "title": "Mappa della coscienza",
-    "intent": ["coscienza", "mappa", "livelli coscienza"],
-    "content": "Struttura dei livelli di coscienza e loro evoluzione.",
-    "url": "https://www.autoguarizione.it/mappa-della-coscienza/"
-  },
-
-  {
-    "id": "trattamento-hr",
-    "title": "Trattamento HR",
-    "intent": ["trattamento", "hr", "cura"],
-    "content": "Metodo di trattamento descritto nel sistema del sito.",
-    "url": "https://www.autoguarizione.it/trattamento-hr/"
-  },
-
-  {
-    "id": "harmony",
-    "title": "Harmony",
-    "intent": ["harmony", "armonia", "energia"],
-    "content": "Sistema descritto come strumento di armonizzazione personale.",
-    "url": "https://www.autoguarizione.it/harmony/"
-  },
-
-  {
-    "id": "donazione",
-    "title": "Donazione",
-    "intent": ["donazione", "supporto", "contributo"],
-    "content": "Pagina dedicata al supporto del progetto tramite donazioni.",
-    "url": "https://www.autoguarizione.it/donazione/"
-  },
-
   {
     "id": "risorse",
     "title": "Risorse gratuite",
-    "intent": ["risorse", "gratis", "strumenti gratuiti"],
-    "content": "Materiali e strumenti gratuiti per il percorso personale.",
+    "text": "Materiali gratuiti per sviluppo personale e consapevolezza.",
     "url": "https://www.autoguarizione.it/risorse/"
-  },
-
-  {
-    "id": "installa-app",
-    "title": "Installa App",
-    "intent": ["app", "installare", "mobile"],
-    "content": "Guida per installare l’app del sito sul dispositivo.",
-    "url": "https://www.autoguarizione.it/wp-content/uploads/2026/03/installa-app.html"
   }
 ]
