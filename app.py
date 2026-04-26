@@ -8,47 +8,29 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================
-# 📦 CARICAMENTO DATA
+# 📦 LOAD DATA
 # =========================
 data = []
 
 if os.path.exists("data.json"):
-    try:
-        with open("data.json", "r", encoding="utf-8") as f:
-            raw = json.load(f)
+    with open("data.json", "r", encoding="utf-8") as f:
+        raw = json.load(f)
 
-        # normalizzazione robusta
-        if isinstance(raw, list):
-            data = [str(x) for x in raw]
-        elif isinstance(raw, dict):
-            data = [str(v) for v in raw.values()]
-        else:
-            data = [str(raw)]
-
-        print("DATA CARICATO:", len(data))
-
-    except Exception as e:
-        print("ERRORE DATA.JSON:", e)
-        data = []
-else:
-    print("data.json mancante")
+    if isinstance(raw, list):
+        data = [str(x) for x in raw]
+    elif isinstance(raw, dict):
+        data = [str(v) for v in raw.values()]
+    else:
+        data = [str(raw)]
 
 
 # =========================
-# 🧹 PULIZIA TESTO (FONDAMENTALE)
+# 🧹 CLEAN TEXT
 # =========================
 def clean(text):
     text = str(text)
-
-    # rimuove HTML
-    text = re.sub(r"<[^>]*>", " ", text)
-
-    # rimuove caratteri strani
-    text = re.sub(r"&[a-zA-Z0-9#]+;", " ", text)
-
-    # spazi multipli
+    text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text)
-
     return text.strip()
 
 
@@ -56,67 +38,80 @@ def clean(text):
 # 🔎 SEARCH
 # =========================
 def search(query):
-    if not data:
-        return []
-
     query = (query or "").lower()
-
     results = []
 
     for chunk in data:
         try:
             text = str(chunk).lower()
-
             score = sum(1 for w in query.split() if w in text)
 
             if score > 0:
                 results.append((score, chunk))
-
         except:
             continue
 
     results.sort(reverse=True, key=lambda x: x[0])
 
-    return [r[1] for r in results[:3]]
+    return [r[1] for r in results[:5]]
 
 
 # =========================
-# 💬 CHAT API
+# 🧠 SIMPLE SUMMARIZER (IMPORTANT)
+# =========================
+def summarize(texts):
+    """
+    Trasforma contenuti grezzi in risposta umana
+    """
+    clean_texts = [clean(t) for t in texts]
+
+    # unisci ma limita
+    joined = " ".join(clean_texts)[:1500]
+
+    # mini "intelligenza": taglia frasi inutili
+    stop_words = [
+        "cookie", "consenso", "menu", "navigazione",
+        "gestisci", "privacy", "wordpress", "login"
+    ]
+
+    for w in stop_words:
+        joined = joined.replace(w, "")
+
+    return joined.strip()
+
+
+# =========================
+# 💬 CHAT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-    try:
-        req = request.get_json(silent=True)
+    req = request.get_json(silent=True)
 
-        if not req:
-            return jsonify({"reply": "Errore: richiesta non valida"}), 400
+    if not req:
+        return jsonify({"reply": "Errore richiesta"}), 400
 
-        user = req.get("message", "")
+    user = req.get("message", "")
 
-        results = search(user)
+    results = search(user)
 
-        # pulizia risultati
-        clean_results = [clean(r) for r in results]
+    if not results:
+        return jsonify({"reply": "Non ho trovato informazioni nel sito."})
 
-        context = "\n\n".join(clean_results) if clean_results else "Nessun contenuto trovato nel sito."
+    summary = summarize(results)
 
-        reply = f"""
-Basandomi sui contenuti del sito:
+    reply = f"""
+Ecco una spiegazione semplice basata sul sito:
 
-{context[:1200]}
+{summary}
 
-👉 Vuoi che te lo spieghi in modo semplice?
+👉 Se vuoi, posso spiegartelo ancora più semplice.
 """
 
-        return jsonify({"reply": reply})
-
-    except Exception as e:
-        print("CHAT ERROR:", e)
-        return jsonify({"reply": "Errore server interno"}), 500
+    return jsonify({"reply": reply})
 
 
 # =========================
-# 🏠 HOME
+# HOME
 # =========================
 @app.route("/")
 def home():
@@ -124,7 +119,7 @@ def home():
 
 
 # =========================
-# 🚀 RUN
+# RUN
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
