@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json, os
+import json, os, re
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# CARICA DATI (non più centrale)
+# CARICA DATI
 # =========================
 data = []
 
@@ -14,51 +14,63 @@ if os.path.exists("data.json"):
     with open("data.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
+print("PAGINE:", len(data))
+
 
 # =========================
-# 🧠 INTELLIGENZA BASE (QUI CAMBIA TUTTO)
+# PULIZIA TESTO SERIA
 # =========================
-def ai_brain(user):
+def clean_text(text):
 
-    u = user.lower()
+    # rimuovi roba inutile
+    text = re.sub(r"cookie|consenso|privacy.*", "", text, flags=re.I)
 
-    # 👉 COME FUNZIONA IL SITO
-    if "come funziona" in u:
-        return """Il sito è pensato per aiutarti in un percorso di autoguarigione.
+    # togli caratteri strani
+    text = re.sub(r"\s+", " ", text)
 
-Offre strumenti, contenuti e percorsi per aumentare la consapevolezza, migliorare la salute e comprendere meglio te stesso.
+    # taglia lunghezza
+    return text[:800]
 
-Puoi esplorare diverse aree come nutrizione, respirazione, energia e crescita personale."""
 
-    # 👉 PROPOSTE
-    if "proposte" in u:
-        return """Le proposte del sito includono diversi percorsi e strumenti pratici.
+# =========================
+# RICERCA MIGLIORATA
+# =========================
+def search(query):
 
-Tra questi ci sono:
-- percorsi di crescita personale
-- strumenti di analisi
-- contenuti per migliorare salute e consapevolezza
-- risorse pratiche da applicare nella vita quotidiana"""
+    q_words = query.lower().split()
+    results = []
 
-    # 👉 RISORSE
-    if "risorse" in u:
-        return """Il sito offre varie risorse utili per il tuo percorso.
+    for page in data:
+        text = page.get("text", "").lower()
 
-Ad esempio:
-- guide pratiche
-- strumenti operativi
-- contenuti di approfondimento
-- materiali per lavorare su corpo e mente"""
+        score = sum(1 for w in q_words if w in text)
 
-    # 👉 DEFAULT (usa contenuto sito ma filtrato)
-    return """Sto ancora imparando dai contenuti del sito.
+        if score > 0:
+            results.append((score, page))
 
-Prova a chiedermi:
-- come funziona il sito
-- quali sono le proposte
-- quali risorse offre
+    results.sort(reverse=True, key=lambda x: x[0])
 
-👉 Posso aiutarti a orientarti meglio."""
+    return [r[1] for r in results[:3]]
+
+
+# =========================
+# RISPOSTA INTELLIGENTE BASE
+# =========================
+def build_answer(results):
+
+    if not results:
+        return "Non ho trovato informazioni precise su questo nel sito."
+
+    answers = []
+
+    for r in results:
+        text = clean_text(r.get("text", ""))
+        answers.append(text)
+
+    # unisci ma separa bene
+    final = "\n\n---\n\n".join(answers[:2])
+
+    return final
 
 
 # =========================
@@ -70,11 +82,20 @@ def chat():
         req = request.get_json()
         user = req.get("message", "")
 
-        reply = ai_brain(user)
+        results = search(user)
+        answer = build_answer(results)
+
+        reply = f"""Ecco cosa ho trovato nel sito:
+
+{answer}
+
+👉 Vuoi che ti riassuma meglio questo contenuto?
+"""
 
         return jsonify({"reply": reply})
 
-    except:
+    except Exception as e:
+        print("ERRORE:", e)
         return jsonify({"reply": "Errore interno"}), 500
 
 
