@@ -4,14 +4,10 @@ import json
 import os
 
 app = Flask(__name__)
-
-# =========================
-# 🌐 CORS (OBBLIGATORIO PER WORDPRESS)
-# =========================
 CORS(app)
 
 # =========================
-# 📦 CARICAMENTO DATA.JSON
+# 📦 DATA SAFE LOAD
 # =========================
 data = []
 
@@ -19,29 +15,29 @@ if os.path.exists("data.json"):
     try:
         with open("data.json", "r", encoding="utf-8") as f:
             data = json.load(f)
-        print(f"data.json caricato: {len(data)} elementi")
+        print("DATA CARICATO:", len(data))
     except Exception as e:
-        print("Errore data.json:", e)
+        print("ERRORE DATA.JSON:", e)
         data = []
 else:
-    print("ATTENZIONE: data.json non trovato")
+    print("data.json mancante")
 
 
 # =========================
-# 🔎 SEARCH (VERSIONE STABILE)
+# 🔎 SEARCH ROBUSTA
 # =========================
 def search(query):
-    results = []
+    if not data:
+        return []
 
-    query = query.lower()
+    query = (query or "").lower()
+
+    results = []
 
     for chunk in data:
         text = chunk.lower() if isinstance(chunk, str) else str(chunk).lower()
 
-        score = 0
-        for word in query.split():
-            if word in text:
-                score += 1
+        score = sum(1 for w in query.split() if w in text)
 
         if score > 0:
             results.append((score, chunk))
@@ -52,43 +48,26 @@ def search(query):
 
 
 # =========================
-# 🧠 MEMORIA CHAT
-# =========================
-memory = {}
-
-
-# =========================
-# 💬 CHAT API
+# 💬 CHAT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        req = request.get_json()
+        req = request.get_json(silent=True)
 
-        if not req or "message" not in req:
-            return jsonify({"reply": "Messaggio non valido"}), 400
+        if not req:
+            return jsonify({"reply": "Errore: JSON non valido"}), 400
 
-        user = req["message"]
+        user = req.get("message", "")
         user_id = req.get("user_id", "default")
-
-        if user_id not in memory:
-            memory[user_id] = []
-
-        memory[user_id].append(user)
 
         results = search(user)
 
-        context = "\n\n".join(results) if results else "Nessun contenuto trovato nel sito."
+        context = "\n\n".join(results) if results else "Nessun contenuto trovato."
 
-        reply = f"""
-Basandomi sui contenuti del sito:
-
-{context[:800]}
-
-👉 Vuoi approfondire meglio?
-"""
-
-        return jsonify({"reply": reply})
+        return jsonify({
+            "reply": f"Basandomi sul sito:\n\n{context[:800]}"
+        })
 
     except Exception as e:
         return jsonify({"reply": f"Errore server: {str(e)}"}), 500
@@ -103,7 +82,7 @@ def home():
 
 
 # =========================
-# 🚀 START SERVER
+# 🚀 RUN
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
