@@ -1,111 +1,76 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json
-import os
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# =========================
-# CARICA KNOWLEDGE
-# =========================
-with open("knowledge.json", "r", encoding="utf-8") as f:
-    knowledge = json.load(f)
-
-print("KNOWLEDGE CARICATO:", len(knowledge))
-
-
-# =========================
-# TROVA CONTENUTO MIGLIORE
-# =========================
-def get_context(user_question):
-    q = user_question.lower()
-
-    best = None
-    best_score = 0
-
-    for item in knowledge:
-        score = sum(1 for w in item["topic"].split() if w in q)
-
-        if score > best_score:
-            best = item
-            best_score = score
-
-    if best:
-        return best["content"]
-
-    return "Non ho informazioni specifiche su questo argomento nel sito."
-
-
-# =========================
-# 🧠 AI (HUGGING FACE FREE)
-# =========================
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
-def ask_ai(question, context):
+HEADERS = {}
 
-    prompt = f"""
-Sei un assistente del sito autoguarizione.it.
-
-Usa queste informazioni:
-
-{context}
-
-Domanda: {question}
-
-Rispondi in modo chiaro, semplice e utile in italiano.
-"""
+def ask_ai(prompt):
 
     try:
-        response = requests.post(
+        r = requests.post(
             API_URL,
+            headers=HEADERS,
             json={"inputs": prompt},
-            timeout=20
+            timeout=25
         )
 
-        data = response.json()
+        data = r.json()
 
-        if isinstance(data, list):
-            return data[0].get("generated_text", "")
+        # DEBUG sicuro
+        print("AI RESPONSE:", data)
 
-        return "Errore AI"
+        if isinstance(data, list) and "generated_text" in data[0]:
+            return data[0]["generated_text"]
+
+        if isinstance(data, dict) and "error" in data:
+            return "AI temporaneamente occupata, riprova"
+
+        return str(data)
 
     except Exception as e:
-        print("ERRORE AI:", e)
-        return context  # fallback intelligente
+        print("AI ERROR:", e)
+        return "Errore AI temporaneo"
 
 
-# =========================
-# CHAT ENDPOINT
-# =========================
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
         data = request.get_json()
-        user = data.get("message", "")
 
-        context = get_context(user)
-        answer = ask_ai(user, context)
+        if not data or "message" not in data:
+            return jsonify({"reply": "Messaggio vuoto"}), 400
 
-        return jsonify({"reply": answer})
+        user_msg = data["message"]
+
+        prompt = f"""
+Sei un assistente del sito autoguarizione.it.
+Rispondi in italiano semplice e chiaro.
+
+Domanda: {user_msg}
+
+Risposta:
+"""
+
+        reply = ask_ai(prompt)
+
+        return jsonify({"reply": reply})
 
     except Exception as e:
-        print("ERRORE:", e)
-        return jsonify({"reply": "Errore server"}), 500
+        print("SERVER ERROR:", e)
+        return jsonify({"reply": "Errore server interno"}), 500
 
 
-# =========================
-# HOME
-# =========================
 @app.route("/")
 def home():
     return "AI attiva"
 
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
