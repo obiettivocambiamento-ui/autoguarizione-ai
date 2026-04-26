@@ -1,62 +1,129 @@
 [
   {
-    "topic": "home",
-    "text": "Il sito presenta un percorso di crescita personale basato su consapevolezza, trasformazione e auto-osservazione. L'obiettivo è aiutare la persona a comprendere sé stessa e attivare un cambiamento interiore pratico e progressivo."
+    "id": "home",
+    "title": "Home",
+    "intent": ["home", "come funziona il sito", "cos'è il sito", "inizio"],
+    "content": "Il sito presenta un percorso di consapevolezza e trasformazione personale basato su osservazione, cambiamento e autonomia.",
+    "url": "https://www.autoguarizione.it/"
   },
+
   {
-    "topic": "proposte",
-    "text": "Le proposte includono percorsi di sviluppo personale, strumenti di consapevolezza, attività guidate e contenuti per migliorare il rapporto tra mente, emozioni e azione nella vita quotidiana."
+    "id": "proposte",
+    "title": "Le mie proposte",
+    "intent": ["proposte", "cosa offre", "servizi", "cosa fa il sito", "offerta"],
+    "content": "Qui trovi i percorsi e servizi di crescita personale proposti dal sito.",
+    "url": "https://www.autoguarizione.it/proposte/"
   },
+
   {
-    "topic": "percorso",
-    "text": "Il percorso è strutturato in fasi progressive: osservazione, risveglio, trasformazione, integrazione e autonomia. Ogni fase rappresenta un livello di consapevolezza e cambiamento personale."
+    "id": "percorso",
+    "title": "Percorso",
+    "intent": ["percorso", "fasi", "come funziona il percorso"],
+    "content": "Il percorso è strutturato in fasi evolutive: risveglio, osservazione, trasformazione e autonomia.",
+    "url": "https://www.autoguarizione.it/percorso/"
   },
+
   {
-    "topic": "analisi",
-    "text": "L'analisi riguarda la comprensione dei propri schemi mentali ed emotivi. Serve a individuare blocchi, comportamenti ripetitivi e dinamiche inconsce che influenzano la vita della persona."
+    "id": "analisi",
+    "title": "Analisi",
+    "intent": ["analisi", "analisi della personalità", "valutazione"],
+    "content": "Strumenti di analisi per comprendere schemi comportamentali e dinamiche personali.",
+    "url": "https://www.autoguarizione.it/analisi/"
   },
+
   {
-    "topic": "heart-bed",
-    "text": "È uno strumento o percorso legato all'equilibrio energetico e alla percezione interiore del corpo e delle emozioni, orientato al benessere e alla consapevolezza corporea."
+    "id": "heart-bed",
+    "title": "Heart Bed",
+    "intent": ["heart bed", "energia", "strumenti energetici"],
+    "content": "Strumento descritto come supporto energetico per riequilibrio e benessere.",
+    "url": "https://www.autoguarizione.it/heart-bed/"
   },
+
   {
-    "topic": "biorisonanza",
-    "text": "La biorisonanza è descritta come una tecnologia energetica che lavora sulle frequenze del corpo per riequilibrare stati di stress, emozioni e benessere generale. Viene presentata come metodo di armonizzazione personale."
+    "id": "biorisonanza",
+    "title": "Biorisonanza",
+    "intent": ["biorisonanza", "frequenze", "energia corpo"],
+    "content": "Approccio basato su frequenze e armonizzazione energetica del corpo.",
+    "url": "https://www.autoguarizione.it/biorisonanza/"
   },
+
   {
-    "topic": "nutrizione",
-    "text": "La nutrizione viene trattata in modo olistico, includendo non solo il cibo ma anche il rapporto emotivo e mentale con l'alimentazione, con attenzione a equilibrio e consapevolezza."
+    "id": "nutrizione",
+    "title": "Nutrizione",
+    "intent": ["nutrizione", "cibo", "alimentazione", "dieta"],
+    "content": "Approccio alla nutrizione legato al benessere fisico e consapevolezza alimentare.",
+    "url": "https://www.autoguarizione.it/nutrizione/"
   },
+
   {
-    "topic": "cristo",
-    "text": "Il contenuto è legato a una visione simbolica e spirituale della coscienza e dell'evoluzione interiore, interpretata come percorso di risveglio e trasformazione personale."
+    "id": "cristo",
+    "title": "Cristo",
+    "intent": ["cristo", "spiritualità", "coscienza"],
+    "content": "Contenuti spirituali legati a coscienza e percorsi interiori.",
+    "url": "https://www.autoguarizione.it/cristo/"
   },
+
   {
-    "topic": "valore",
-    "text": "Il valore è collegato alla crescita personale e alla consapevolezza individuale, con attenzione al significato dell'esperienza e alla trasformazione interiore."
+    "id": "valore",
+    "title": "Valore",
+    "intent": ["valore", "significato", "principi"],
+    "content": "Riflessioni sul valore personale e il significato dell’esperienza umana.",
+    "url": "https://www.autoguarizione.it/valore/"
   },
+
   {
-    "topic": "economia del dono",
-    "text": "L'economia del dono è una visione in cui lo scambio non è basato solo sul denaro ma su reciprocità, valore umano e contributo consapevole alla comunità."
+    "id": "economia-dono",
+    "title": "Economia circolare del dono",
+    "intent": ["dono", "economia", "circolare", "valore scambio"],
+    "content": "Modello basato su scambio consapevole e economia del dono.",
+    "url": "https://www.autoguarizione.it/economia-circolare-del-dono/"
   },
+
   {
-    "topic": "mappa coscienza",
-    "text": "La mappa della coscienza rappresenta livelli evolutivi della consapevolezza umana, descrivendo stati mentali ed emotivi che indicano crescita o blocco interiore."
+    "id": "mappa-coscienza",
+    "title": "Mappa della coscienza",
+    "intent": ["coscienza", "mappa", "livelli coscienza"],
+    "content": "Struttura dei livelli di coscienza e loro evoluzione.",
+    "url": "https://www.autoguarizione.it/mappa-della-coscienza/"
   },
+
   {
-    "topic": "harmony",
-    "text": "Harmony è un concetto legato all'equilibrio tra mente, corpo ed emozioni, orientato a riportare armonia interiore attraverso pratiche di consapevolezza."
+    "id": "trattamento-hr",
+    "title": "Trattamento HR",
+    "intent": ["trattamento", "hr", "cura"],
+    "content": "Metodo di trattamento descritto nel sistema del sito.",
+    "url": "https://www.autoguarizione.it/trattamento-hr/"
   },
+
   {
-    "topic": "trattamento hr",
-    "text": "È un tipo di percorso o trattamento orientato alla regolazione energetica e al benessere psicofisico attraverso approcci integrati."
+    "id": "harmony",
+    "title": "Harmony",
+    "intent": ["harmony", "armonia", "energia"],
+    "content": "Sistema descritto come strumento di armonizzazione personale.",
+    "url": "https://www.autoguarizione.it/harmony/"
   },
+
   {
-    "topic": "risorse",
-    "text": "Le risorse includono materiali gratuiti, guide, strumenti e contenuti utili per il percorso di crescita personale e consapevolezza."
+    "id": "donazione",
+    "title": "Donazione",
+    "intent": ["donazione", "supporto", "contributo"],
+    "content": "Pagina dedicata al supporto del progetto tramite donazioni.",
+    "url": "https://www.autoguarizione.it/donazione/"
   },
+
   {
-    "topic": "principi generali",
-    "text": "Il sito si basa su un modello di trasformazione personale che integra osservazione, consapevolezza, cambiamento e autonomia come fasi di evoluzione individuale."
+    "id": "risorse",
+    "title": "Risorse gratuite",
+    "intent": ["risorse", "gratis", "strumenti gratuiti"],
+    "content": "Materiali e strumenti gratuiti per il percorso personale.",
+    "url": "https://www.autoguarizione.it/risorse/"
+  },
+
+  {
+    "id": "installa-app",
+    "title": "Installa App",
+    "intent": ["app", "installare", "mobile"],
+    "content": "Guida per installare l’app del sito sul dispositivo.",
+    "url": "https://www.autoguarizione.it/wp-content/uploads/2026/03/installa-app.html"
   }
 ]
