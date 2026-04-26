@@ -1,11 +1,17 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import json
 import os
 
 app = Flask(__name__)
 
 # =========================
-# 📦 CARICAMENTO DATA.JSON SICURO
+# 🌐 CORS (OBBLIGATORIO PER WORDPRESS)
+# =========================
+CORS(app)
+
+# =========================
+# 📦 CARICAMENTO DATA.JSON
 # =========================
 data = []
 
@@ -15,14 +21,14 @@ if os.path.exists("data.json"):
             data = json.load(f)
         print(f"data.json caricato: {len(data)} elementi")
     except Exception as e:
-        print("Errore caricamento data.json:", e)
+        print("Errore data.json:", e)
         data = []
 else:
     print("ATTENZIONE: data.json non trovato")
 
 
 # =========================
-# 🔎 SEARCH MIGLIORATA
+# 🔎 SEARCH (VERSIONE STABILE)
 # =========================
 def search(query):
     results = []
@@ -33,7 +39,6 @@ def search(query):
         text = chunk.lower() if isinstance(chunk, str) else str(chunk).lower()
 
         score = 0
-
         for word in query.split():
             if word in text:
                 score += 1
@@ -47,7 +52,7 @@ def search(query):
 
 
 # =========================
-# 🧠 MEMORIA BASE
+# 🧠 MEMORIA CHAT
 # =========================
 memory = {}
 
