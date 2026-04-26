@@ -1,14 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import json
-import os
-import re
+import json, os, re
 
 app = Flask(__name__)
 CORS(app)
 
 # =========================
-# 📦 LOAD DATA
+# LOAD DATA
 # =========================
 data = []
 
@@ -16,95 +14,105 @@ if os.path.exists("data.json"):
     with open("data.json", "r", encoding="utf-8") as f:
         raw = json.load(f)
 
+    # 👇 PRENDI SOLO IL CAMPO TEXT
     if isinstance(raw, list):
-        data = [str(x) for x in raw]
-    elif isinstance(raw, dict):
-        data = [str(v) for v in raw.values()]
-    else:
-        data = [str(raw)]
+        for item in raw:
+            if isinstance(item, dict) and "text" in item:
+                data.append(item["text"])
+            else:
+                data.append(str(item))
+
+print("PAGINE CARICATE:", len(data))
 
 
 # =========================
-# 🧹 CLEAN TEXT
+# CLEAN TEXT SERIO
 # =========================
 def clean(text):
     text = str(text)
+
+    # rimuove html
     text = re.sub(r"<[^>]+>", " ", text)
+
+    # rimuove cookie / menu / wordpress
+    blacklist = [
+        "cookie", "consenso", "menu", "navigazione",
+        "gestisci", "privacy", "statistiche",
+        "wordpress", "login", "preferenze"
+    ]
+
+    for w in blacklist:
+        text = re.sub(w, "", text, flags=re.IGNORECASE)
+
+    # spazi
     text = re.sub(r"\s+", " ", text)
+
     return text.strip()
 
 
 # =========================
-# 🔎 SEARCH
+# SEARCH MIGLIORATA
 # =========================
 def search(query):
-    query = (query or "").lower()
+    query = query.lower()
     results = []
 
     for chunk in data:
-        try:
-            text = str(chunk).lower()
-            score = sum(1 for w in query.split() if w in text)
+        text = chunk.lower()
 
-            if score > 0:
-                results.append((score, chunk))
-        except:
-            continue
+        score = sum(1 for w in query.split() if w in text)
 
-    results.sort(reverse=True, key=lambda x: x[0])
+        if score > 0:
+            results.append((score, chunk))
 
-    return [r[1] for r in results[:5]]
+    results.sort(reverse=True)
+
+    return [r[1] for r in results[:3]]
 
 
 # =========================
-# 🧠 SIMPLE SUMMARIZER (IMPORTANT)
+# FORMATTA RISPOSTA (UMANA)
 # =========================
-def summarize(texts):
-    """
-    Trasforma contenuti grezzi in risposta umana
-    """
-    clean_texts = [clean(t) for t in texts]
+def format_answer(text):
+    text = clean(text)
 
-    # unisci ma limita
-    joined = " ".join(clean_texts)[:1500]
+    # taglia
+    text = text[:800]
 
-    # mini "intelligenza": taglia frasi inutili
-    stop_words = [
-        "cookie", "consenso", "menu", "navigazione",
-        "gestisci", "privacy", "wordpress", "login"
-    ]
+    # aggiunge paragrafi leggibili
+    sentences = text.split(". ")
 
-    for w in stop_words:
-        joined = joined.replace(w, "")
+    formatted = "\n\n".join(sentences[:5])
 
-    return joined.strip()
+    return formatted
 
 
 # =========================
-# 💬 CHAT
+# CHAT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-    req = request.get_json(silent=True)
-
-    if not req:
-        return jsonify({"reply": "Errore richiesta"}), 400
-
+    req = request.get_json()
     user = req.get("message", "")
 
     results = search(user)
 
     if not results:
-        return jsonify({"reply": "Non ho trovato informazioni nel sito."})
+        return jsonify({
+            "reply": "Non ho trovato informazioni chiare nel sito su questo argomento."
+        })
 
-    summary = summarize(results)
+    # prendi il risultato migliore
+    best = results[0]
+
+    answer = format_answer(best)
 
     reply = f"""
-Ecco una spiegazione semplice basata sul sito:
+Ecco cosa ho trovato sul sito:
 
-{summary}
+{answer}
 
-👉 Se vuoi, posso spiegartelo ancora più semplice.
+👉 Vuoi che ti riassuma meglio o più chiaramente?
 """
 
     return jsonify({"reply": reply})
