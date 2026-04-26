@@ -7,15 +7,25 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================
-# 📦 DATA SAFE LOAD
+# 📦 CARICAMENTO ROBUSTO DATA
 # =========================
 data = []
 
 if os.path.exists("data.json"):
     try:
         with open("data.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-        print("DATA CARICATO:", len(data))
+            raw = json.load(f)
+
+        # 🔥 FORZA TUTTO A STRINGA
+        if isinstance(raw, list):
+            data = [str(x) for x in raw]
+        elif isinstance(raw, dict):
+            data = [str(v) for v in raw.values()]
+        else:
+            data = [str(raw)]
+
+        print("DATA CARICATO OK:", len(data))
+
     except Exception as e:
         print("ERRORE DATA.JSON:", e)
         data = []
@@ -24,7 +34,7 @@ else:
 
 
 # =========================
-# 🔎 SEARCH ROBUSTA
+# 🔎 SEARCH SICURA (NO CRASH)
 # =========================
 def search(query):
     if not data:
@@ -35,12 +45,16 @@ def search(query):
     results = []
 
     for chunk in data:
-        text = chunk.lower() if isinstance(chunk, str) else str(chunk).lower()
+        try:
+            text = str(chunk).lower()
 
-        score = sum(1 for w in query.split() if w in text)
+            score = sum(1 for w in query.split() if w in text)
 
-        if score > 0:
-            results.append((score, chunk))
+            if score > 0:
+                results.append((score, chunk))
+
+        except:
+            continue
 
     results.sort(reverse=True, key=lambda x: x[0])
 
@@ -48,7 +62,7 @@ def search(query):
 
 
 # =========================
-# 💬 CHAT
+# 💬 CHAT (ULTRA SAFE)
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -56,10 +70,9 @@ def chat():
         req = request.get_json(silent=True)
 
         if not req:
-            return jsonify({"reply": "Errore: JSON non valido"}), 400
+            return jsonify({"reply": "Errore: richiesta non valida"}), 400
 
         user = req.get("message", "")
-        user_id = req.get("user_id", "default")
 
         results = search(user)
 
@@ -70,7 +83,8 @@ def chat():
         })
 
     except Exception as e:
-        return jsonify({"reply": f"Errore server: {str(e)}"}), 500
+        print("CHAT ERROR:", e)
+        return jsonify({"reply": "Errore server interno"}), 500
 
 
 # =========================
