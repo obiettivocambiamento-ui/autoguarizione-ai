@@ -9,74 +9,78 @@ CORS(app)
 
 print("🚀 SERVER STARTING...")
 
-# =========================
-# GEMINI KEY
-# =========================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
 print("🔑 GEMINI KEY PRESENTE:", bool(GEMINI_API_KEY))
 
 # =========================
-# HOME
+# MODELLI DA PROVARE
 # =========================
+GEMINI_MODELS = [
+    "gemini-1.5-pro",
+    "gemini-1.5-flash",
+    "gemini-pro"
+]
+
 @app.route("/")
 def home():
     return "OK - SERVER ATTIVO"
 
 # =========================
-# GEMINI FUNCTION (STABILE)
+# GEMINI CALL ROBUSTA
 # =========================
 def call_gemini(message):
 
     if not GEMINI_API_KEY:
         return "Errore AI (API key mancante)"
 
-    try:
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/"
-            f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        )
+    last_error = None
 
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": message}
-                    ]
-                }
-            ]
-        }
+    for model in GEMINI_MODELS:
 
-        response = requests.post(url, json=payload, timeout=20)
+        try:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/"
+                f"models/{model}:generateContent?key={GEMINI_API_KEY}"
+            )
 
-        # 🔥 DEBUG RAW
-        data = response.json()
-        print("📦 GEMINI RAW RESPONSE:", data)
+            payload = {
+                "contents": [
+                    {
+                        "parts": [{"text": message}]
+                    }
+                ]
+            }
 
-        # ❌ errore API
-        if "error" in data:
-            return f"Errore Gemini API: {data['error'].get('message', 'unknown')}"
+            response = requests.post(url, json=payload, timeout=20)
+            data = response.json()
 
-        # ❌ risposta vuota
-        if "candidates" not in data or len(data["candidates"]) == 0:
-            return "Gemini non ha generato risposta (vuoto o blocco)"
+            print(f"📦 MODELLO: {model}")
+            print("📦 RAW:", data)
 
-        candidate = data["candidates"][0]
+            if "error" in data:
+                last_error = data["error"].get("message")
+                continue
 
-        # ❌ struttura non valida
-        if "content" not in candidate:
-            return "Risposta Gemini non valida (struttura inattesa)"
+            if "candidates" not in data or len(data["candidates"]) == 0:
+                last_error = "candidates vuoti"
+                continue
 
-        return candidate["content"]["parts"][0]["text"]
+            candidate = data["candidates"][0]
 
-    except Exception as e:
-        print("🔥 GEMINI EXCEPTION")
-        traceback.print_exc()
-        return "Errore interno AI"
+            if "content" not in candidate:
+                last_error = "no content"
+                continue
 
-# =========================
-# CHAT ENDPOINT
-# =========================
+            return candidate["content"]["parts"][0]["text"]
+
+        except Exception as e:
+            print(f"🔥 ERRORE MODELLO {model}")
+            traceback.print_exc()
+            last_error = str(e)
+
+    return f"Errore Gemini: nessun modello valido. Ultimo errore: {last_error}"
+
+
 @app.route("/chat", methods=["POST"])
 def chat():
 
@@ -94,13 +98,9 @@ def chat():
         return jsonify({"reply": reply})
 
     except Exception:
-        print("🔥 CHAT ERROR")
         traceback.print_exc()
-
         return jsonify({"reply": "Errore server"}), 200
 
-# =========================
-# START
-# =========================
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
