@@ -1,5 +1,4 @@
 import os
-import json
 import sqlite3
 import requests
 from flask import Flask, request, jsonify
@@ -8,23 +7,20 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# =========================
-# CONFIG
-# =========================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# =========================
+# =====================
 # DB SQLITE
-# =========================
+# =====================
 def init_db():
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
     c.execute("""
-        CREATE TABLE IF NOT EXISTS chat_memory (
+        CREATE TABLE IF NOT EXISTS chat (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
-            question TEXT,
-            answer TEXT
+            q TEXT,
+            a TEXT
         )
     """)
     conn.commit()
@@ -32,76 +28,42 @@ def init_db():
 
 init_db()
 
-def save_memory(user_id, q, a):
+def save(user_id, q, a):
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
-    c.execute(
-        "INSERT INTO chat_memory (user_id, question, answer) VALUES (?, ?, ?)",
-        (user_id, q, a)
-    )
+    c.execute("INSERT INTO chat (user_id, q, a) VALUES (?,?,?)",
+              (user_id, q, a))
     conn.commit()
     conn.close()
 
-def get_memory(user_id):
+def history(user_id):
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
-    c.execute("""
-        SELECT question, answer
-        FROM chat_memory
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 5
-    """, (user_id,))
+    c.execute("SELECT q,a FROM chat WHERE user_id=? ORDER BY id DESC LIMIT 5", (user_id,))
     rows = c.fetchall()
     conn.close()
 
-    history = ""
-    for q, a in reversed(rows):
-        history += f"Utente: {q}\nAI: {a}\n"
-    return history
+    return "\n".join([f"U:{q}\nA:{a}" for q,a in reversed(rows)])
 
-# =========================
-# KNOWLEDGE
-# =========================
-with open("knowledge.json", "r", encoding="utf-8") as f:
-    knowledge = json.load(f)
-
-def build_context():
-    return "\n".join(
-        f"{k['title']}: {k['content']} ({k['url']})"
-        for k in knowledge
-    )
-
-# =========================
-# AI GEMINI (STABILE)
-# =========================
-def ask_ai(user_input, user_id):
+# =====================
+# GEMINI
+# =====================
+def ask_ai(text, user_id):
 
     if not GEMINI_API_KEY:
-        return "⚠️ API key mancante"
-
-    history = get_memory(user_id)
-    context = build_context()
+        return "API KEY mancante"
 
     prompt = f"""
-Sei un assistente del sito autoguarizione.it.
-
-Rispondi in modo naturale, chiaro e utile.
+Sei un assistente chiaro e naturale.
 
 STORIA:
-{history}
-
-CONTENUTO SITO:
-{context}
+{history(user_id)}
 
 DOMANDA:
-{user_input}
+{text}
 """
 
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/"
-        f"models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    )
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
     body = {
         "contents": [
@@ -114,46 +76,52 @@ DOMANDA:
 
         if r.status_code != 200:
             print("GEMINI ERROR:", r.text)
-            return "⚠️ AI temporaneamente non disponibile"
+            return "AI temporaneamente non disponibile"
 
         data = r.json()
 
         answer = data["candidates"][0]["content"]["parts"][0]["text"]
 
-        save_memory(user_id, user_input, answer)
+        save(user_id, text, answer)
 
         return answer
 
     except Exception as e:
-        print("EXCEPTION:", str(e))
-        return "⚠️ Errore connessione AI"
+        print("ERROR:", e)
+        return "Errore AI"
 
-# =========================
-# API CHAT
-# =========================
+# =====================
+# CHAT API (FIX DEFINITIVO)
+# =====================
 @app.route("/chat", methods=["POST"])
 def chat():
 
-    data = request.json
-    user_input = data.get("message", "")
-    user_id = data.get("user_id", "default")
+    try:
+        data = request.get_json(force=True)
 
-    if not user_input:
-        return jsonify({"reply": "Scrivi una domanda"})
+        text = data.get("message", "")
+        user_id = data.get("user_id", "u1")
 
-    reply = ask_ai(user_input, user_id)
+        if not text:
+            return jsonify({"reply": "Scrivi qualcosa"})
 
-    return jsonify({"reply": reply})
+        reply = ask_ai(text, user_id)
 
-# =========================
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        print("CHAT ERROR:", e)
+        return jsonify({"reply": "Errore server"}), 500
+
+# =====================
 # HOME
-# =========================
+# =====================
 @app.route("/")
 def home():
     return "AI + SQLITE + GEMINI OK"
 
-# =========================
+# =====================
 # RUN
-# =========================
+# =====================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
