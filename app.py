@@ -1,99 +1,156 @@
+import os
+import json
+import sqlite3
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import json
 
 app = Flask(__name__)
 CORS(app)
 
+GEMINI_API_KEY = os.getenv("AIzaSyBKlJYkWNR-2PzRHzmKWhcK9YONGCvhxjE")
+
 # =========================
-# CARICAMENTO KNOWLEDGE
+# DATABASE SQLITE
+# =========================
+def init_db():
+    conn = sqlite3.connect("memory.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS chat_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            question TEXT,
+            answer TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# =========================
+# SALVA MEMORIA
+# =========================
+def save_memory(user_id, question, answer):
+    conn = sqlite3.connect("memory.db")
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO chat_memory (user_id, question, answer) VALUES (?, ?, ?)",
+        (user_id, question, answer)
+    )
+    conn.commit()
+    conn.close()
+
+# =========================
+# RECUPERA MEMORIA
+# =========================
+def get_memory(user_id):
+    conn = sqlite3.connect("memory.db")
+    c = conn.cursor()
+    c.execute("""
+        SELECT question, answer 
+        FROM chat_memory 
+        WHERE user_id=? 
+        ORDER BY id DESC 
+        LIMIT 5
+    """, (user_id,))
+    rows = c.fetchall()
+    conn.close()
+
+    history = ""
+    for q, a in reversed(rows):
+        history += f"Utente: {q}\nAI: {a}\n"
+
+    return history
+
+# =========================
+# KNOWLEDGE
 # =========================
 with open("knowledge.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+    knowledge = json.load(f)
 
-texts = [item["text"] for item in data]
-
-# =========================
-# STOPWORDS ITALIANE BASE (COMPATIBILI)
-# =========================
-ITALIAN_STOPWORDS = [
-    "il", "lo", "la", "i", "gli", "le",
-    "un", "una", "e", "o", "di", "da", "a",
-    "che", "come", "cosa", "per", "con",
-    "su", "nel", "nella", "nei", "nelle",
-    "è", "sono", "era", "essere", "ho", "hai"
-]
+def build_context():
+    text = ""
+    for k in knowledge:
+        text += f"{k['title']}: {k['content']} ({k['url']})\n"
+    return text
 
 # =========================
-# MODELLO TF-IDF
+# GEMINI
 # =========================
-vectorizer = TfidfVectorizer(stop_words=ITALIAN_STOPWORDS)
-matrix = vectorizer.fit_transform(texts)
+def ask_ai(user_input, user_id):
 
-# =========================
-# MATCH SEMANTICO
-# =========================
-def find_best_match(query):
-    if not query:
-        return None
+    history = get_memory(user_id)
+    context = build_context()
 
-    q_vec = vectorizer.transform([query])
-    scores = cosine_similarity(q_vec, matrix)[0]
+    prompt = f"""
+Sei un assistente umano del sito autoguarizione.it.
 
-    best_index = scores.argmax()
-    best_score = scores[best_index]
+COMPORTAMENTO:
+- Rispondi in modo naturale
+- Non copiare testi
+- Aiuta davvero
+- Collega le informazioni
 
-    # soglia anti-risposte casuali
-    if best_score < 0.12:
-        return None
+STORIA:
+{history}
 
-    return data[best_index]
+CONTENUTO:
+{context}
 
-# =========================
-# RISPOSTA PULITA
-# =========================
-def build_response(item):
-    return f"""📌 {item['title']}
+DOMANDA:
+{user_input}
 
-{item['text']}
-
-🔗 Approfondisci:
-{item['url']}
+RISPOSTA:
 """
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+
+    body = {
+        "contents": [
+            {"parts": [{"text": prompt}]}
+        ]
+    }
+
+    r = requests.post(url, json=body)
+
+    if r.status_code != 200:
+        return "⚠️ Errore AI"
+
+    data = r.json()
+
+    try:
+        answer = data["candidates"][0]["content"]["parts"][0]["text"]
+    except:
+        answer = "⚠️ Errore risposta"
+
+    save_memory(user_id, user_input, answer)
+
+    return answer
 
 # =========================
 # API CHAT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-    try:
-        user_message = request.json.get("message", "")
 
-        item = find_best_match(user_message)
+    user = request.json.get("message", "")
+    user_id = request.json.get("user_id", "default")
 
-        if item is None:
-            return jsonify({
-                "reply": "Non ho trovato una sezione precisa nel sito. Puoi riformulare la domanda?"
-            })
+    if not user:
+        return jsonify({"reply": "Scrivi una domanda 😊"})
 
-        return jsonify({
-            "reply": build_response(item),
-            "source": item["id"]
-        })
+    reply = ask_ai(user, user_id)
 
-    except Exception as e:
-        return jsonify({
-            "reply": "Errore interno del server."
-        }), 500
+    return jsonify({"reply": reply})
 
 # =========================
 # HOME
 # =========================
 @app.route("/")
 def home():
-    return "AI SEMANTICA ATTIVA - OK"
+    return "AI + SQLITE ATTIVA"
 
 # =========================
 # RUN
