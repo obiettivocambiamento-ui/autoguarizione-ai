@@ -9,55 +9,60 @@ CORS(app)
 print("🚀 SERVER STARTING...")
 
 # =========================
-# GEMINI SAFE INIT
+# GEMINI API KEY
 # =========================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GEMINI_API_KEY:
-    print("⚠️ GEMINI API KEY MANCANTE (ma server parte lo stesso)")
+print("🔑 GEMINI KEY PRESENTE:", bool(GEMINI_API_KEY))
 
 # =========================
-# SAFE CHAT FUNCTION
+# HOME TEST
 # =========================
-def call_gemini_safe(text):
+@app.route("/")
+def home():
+    return "OK - SERVER ATTIVO"
+
+# =========================
+# GEMINI CALL SAFE
+# =========================
+def call_gemini(message):
+
+    if not GEMINI_API_KEY:
+        return "Errore AI (Gemini non disponibile: API key mancante)"
 
     try:
-        if not GEMINI_API_KEY:
-            return "AI non configurata (API key mancante)"
-
         import requests
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
         payload = {
             "contents": [
-                {"parts": [{"text": text}]}
+                {
+                    "parts": [
+                        {"text": message}
+                    ]
+                }
             ]
         }
 
-        r = requests.post(url, json=payload, timeout=20)
+        response = requests.post(url, json=payload, timeout=20)
 
-        if r.status_code != 200:
-            print("GEMINI ERROR:", r.text)
-            return "Errore AI (Gemini non disponibile)"
+        if response.status_code != 200:
+            print("❌ GEMINI ERROR STATUS:", response.status_code)
+            print(response.text)
+            return "Errore AI (Gemini risposta non valida)"
 
-        data = r.json()
+        data = response.json()
 
         return data["candidates"][0]["content"]["parts"][0]["text"]
 
     except Exception as e:
-        print("GEMINI EXCEPTION:", e)
+        print("🔥 GEMINI EXCEPTION")
+        traceback.print_exc()
         return "Errore AI interno"
 
 # =========================
-# HOME
-# =========================
-@app.route("/")
-def home():
-    return "OK - AI SERVER STABILE ATTIVO"
-
-# =========================
-# CHAT (ROBUSTA)
+# CHAT ENDPOINT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -67,29 +72,32 @@ def chat():
         text = data.get("message", "")
 
         if not text:
-            return jsonify({"reply": "scrivi un messaggio"})
+            return jsonify({"reply": "Scrivi un messaggio"}), 200
 
-        reply = call_gemini_safe(text)
+        print("💬 USER:", text)
 
-        return jsonify({"reply": reply})
+        reply = call_gemini(text)
+
+        return jsonify({
+            "reply": reply
+        })
 
     except Exception as e:
-        print("🔥 CHAT CRASH:")
+        print("🔥 CHAT ERROR")
         traceback.print_exc()
 
         return jsonify({
-            "reply": "Errore server (debug attivo)"
+            "reply": "Errore server interno"
         }), 200
 
 # =========================
-# START SAFE
+# RUN SERVER
 # =========================
 if __name__ == "__main__":
 
     try:
-        print("✅ Flask starting...")
         app.run(host="0.0.0.0", port=10000)
 
     except Exception as e:
-        print("💥 FATAL:", e)
+        print("💥 FATAL ERROR")
         traceback.print_exc()
