@@ -13,74 +13,88 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("🔑 GEMINI KEY PRESENTE:", bool(GEMINI_API_KEY))
 
 # =========================
-# MODELLI DA PROVARE
+# HOME
 # =========================
-GEMINI_MODELS = [
-    "gemini-1.5-pro",
-    "gemini-1.5-flash",
-    "gemini-pro"
-]
-
 @app.route("/")
 def home():
     return "OK - SERVER ATTIVO"
 
 # =========================
-# GEMINI CALL ROBUSTA
+# TROVA MODELLI DISPONIBILI
+# =========================
+def get_available_models():
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}"
+        res = requests.get(url, timeout=10)
+        data = res.json()
+
+        models = []
+
+        for m in data.get("models", []):
+            name = m.get("name", "")
+            if "generateContent" in m.get("supportedGenerationMethods", []):
+                models.append(name)
+
+        print("📦 MODELLI DISPONIBILI:", models)
+
+        return models
+
+    except Exception:
+        traceback.print_exc()
+        return []
+
+
+# =========================
+# GEMINI CALL CORRETTA
 # =========================
 def call_gemini(message):
 
     if not GEMINI_API_KEY:
         return "Errore AI (API key mancante)"
 
-    last_error = None
+    models = get_available_models()
 
-    for model in GEMINI_MODELS:
+    if not models:
+        return "Nessun modello Gemini disponibile per questa API key"
 
-        try:
-            url = (
-                "https://generativelanguage.googleapis.com/v1beta/"
-                f"models/{model}:generateContent?key={GEMINI_API_KEY}"
-            )
+    # usa il primo modello valido
+    model = models[0]
 
-            payload = {
-                "contents": [
-                    {
-                        "parts": [{"text": message}]
-                    }
-                ]
-            }
+    print("🎯 USO MODELLO:", model)
 
-            response = requests.post(url, json=payload, timeout=20)
-            data = response.json()
+    try:
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/"
+            f"{model}:generateContent?key={GEMINI_API_KEY}"
+        )
 
-            print(f"📦 MODELLO: {model}")
-            print("📦 RAW:", data)
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": message}]
+                }
+            ]
+        }
 
-            if "error" in data:
-                last_error = data["error"].get("message")
-                continue
+        response = requests.post(url, json=payload, timeout=20)
+        data = response.json()
 
-            if "candidates" not in data or len(data["candidates"]) == 0:
-                last_error = "candidates vuoti"
-                continue
+        print("📦 GEMINI RESPONSE:", data)
 
-            candidate = data["candidates"][0]
+        if "error" in data:
+            return f"Errore Gemini API: {data['error'].get('message')}"
 
-            if "content" not in candidate:
-                last_error = "no content"
-                continue
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-            return candidate["content"]["parts"][0]["text"]
-
-        except Exception as e:
-            print(f"🔥 ERRORE MODELLO {model}")
-            traceback.print_exc()
-            last_error = str(e)
-
-    return f"Errore Gemini: nessun modello valido. Ultimo errore: {last_error}"
+    except Exception:
+        traceback.print_exc()
+        return "Errore interno AI"
 
 
+# =========================
+# CHAT
+# =========================
 @app.route("/chat", methods=["POST"])
 def chat():
 
