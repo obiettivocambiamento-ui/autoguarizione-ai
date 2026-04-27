@@ -13,22 +13,29 @@ CORS(app)
 with open("knowledge.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
-# testi usati per il matching semantico
 texts = [item["text"] for item in data]
 
+# =========================
+# STOPWORDS ITALIANE BASE (COMPATIBILI)
+# =========================
+ITALIAN_STOPWORDS = [
+    "il", "lo", "la", "i", "gli", "le",
+    "un", "una", "e", "o", "di", "da", "a",
+    "che", "come", "cosa", "per", "con",
+    "su", "nel", "nella", "nei", "nelle",
+    "è", "sono", "era", "essere", "ho", "hai"
+]
 
 # =========================
-# MODELLO SEMANTICO (TF-IDF)
+# MODELLO TF-IDF
 # =========================
-vectorizer = TfidfVectorizer(stop_words="italian")
+vectorizer = TfidfVectorizer(stop_words=ITALIAN_STOPWORDS)
 matrix = vectorizer.fit_transform(texts)
 
-
 # =========================
-# TROVA MIGLIOR MATCH
+# MATCH SEMANTICO
 # =========================
 def find_best_match(query):
-
     if not query:
         return None
 
@@ -38,18 +45,16 @@ def find_best_match(query):
     best_index = scores.argmax()
     best_score = scores[best_index]
 
-    # soglia minima per evitare risposte casuali
-    if best_score < 0.10:
+    # soglia anti-risposte casuali
+    if best_score < 0.12:
         return None
 
     return data[best_index]
 
-
 # =========================
-# GENERAZIONE RISPOSTA
+# RISPOSTA PULITA
 # =========================
 def build_response(item):
-
     return f"""📌 {item['title']}
 
 {item['text']}
@@ -58,13 +63,11 @@ def build_response(item):
 {item['url']}
 """
 
-
 # =========================
-# CHAT API
+# API CHAT
 # =========================
 @app.route("/chat", methods=["POST"])
 def chat():
-
     try:
         user_message = request.json.get("message", "")
 
@@ -72,7 +75,7 @@ def chat():
 
         if item is None:
             return jsonify({
-                "reply": "Non ho trovato una corrispondenza chiara nel sito. Puoi riformulare la domanda?"
+                "reply": "Non ho trovato una sezione precisa nel sito. Puoi riformulare la domanda?"
             })
 
         return jsonify({
@@ -85,17 +88,15 @@ def chat():
             "reply": "Errore interno del server."
         }), 500
 
-
 # =========================
 # HOME
 # =========================
 @app.route("/")
 def home():
-    return "AI SEMANTICA STABILE ATTIVA"
-
+    return "AI SEMANTICA ATTIVA - OK"
 
 # =========================
-# START SERVER
+# RUN
 # =========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
