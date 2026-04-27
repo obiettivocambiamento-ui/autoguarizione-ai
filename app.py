@@ -10,15 +10,12 @@ CORS(app)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# =====================
-# LOAD KNOWLEDGE
-# =====================
 with open("knowledge.json", "r", encoding="utf-8") as f:
     KNOWLEDGE = json.load(f)
 
-# =====================
-# MEMORY SQLITE
-# =====================
+# =========================
+# MEMORY
+# =========================
 def init_db():
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
@@ -35,123 +32,137 @@ def init_db():
 
 init_db()
 
-def save(user_id, q, a):
-    conn = sqlite3.connect("memory.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO chat (user_id,q,a) VALUES (?,?,?)", (user_id,q,a))
-    conn.commit()
-    conn.close()
-
 def history(user_id):
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
-    c.execute("SELECT q,a FROM chat WHERE user_id=? ORDER BY id DESC LIMIT 3", (user_id,))
+    c.execute("SELECT q,a FROM chat WHERE user_id=? ORDER BY id DESC LIMIT 5", (user_id,))
     rows = c.fetchall()
     conn.close()
-    return " ".join([q+" "+a for q,a in rows])
+    return "\n".join([f"U:{q}\nA:{a}" for q,a in rows])
 
-# =====================
-# INTENT MATCHING (SEMANTICO BASE)
-# =====================
-def find_knowledge(text):
-
-    t = text.lower()
-
-    for item in KNOWLEDGE:
-        for k in item["keywords"]:
-            if k in t:
-                return item
-
-    return None
-
-# =====================
-# GEMINI (SOLO REWRITE)
-# =====================
-def refine_with_gemini(text, base_answer):
+# =========================
+# GEMINI CALL (VERO RAG)
+# =========================
+def ask_gemini(prompt):
 
     if not GEMINI_API_KEY:
-        return base_answer
-
-    prompt = f"""
-Rendi questa risposta più naturale e fluida senza cambiare il significato:
-
-RISPOSTA BASE:
-{base_answer}
-
-DOMANDA UTENTE:
-{text}
-"""
+        raise Exception("NO API KEY")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
 
     body = {
-        "contents": [{"parts":[{"text":prompt}]}]
+        "contents": [
+            {"parts":[{"text":prompt}]}
+        ]
     }
 
+    r = requests.post(url, json=body, timeout=15)
+
+    if r.status_code != 200:
+        print("GEMINI ERROR:", r.text)
+        raise Exception("Gemini failed")
+
+    data = r.json()
+
+    return data["candidates"][0]["content"]["parts"][0]["text"]
+
+# =========================
+# SEMANTIC SEARCH (NON KEYWORD)
+# =========================
+def search_knowledge(user_text):
+
+    t = user_text.lower()
+
+    best = None
+    score = 0
+
+    for item in KNOWLEDGE:
+
+        s = 0
+
+        for k in item["keywords"]:
+            if k in t:
+                s += 1
+
+        if s > score:
+            score = s
+            best = item
+
+    return best
+
+# =========================
+# CORE AI LOGIC
+# =========================
+def generate(user_text, user_id):
+
+    context = search_knowledge(user_text)
+
+    base_context = ""
+    link = ""
+
+    if context:
+        base_context = context["answer"]
+        link = context["url"]
+
+    prompt = f"""
+Sei un assistente AI avanzato.
+
+CONTESTO SITO:
+{base_context}
+
+STORIA:
+{history(user_id)}
+
+UTENTE:
+{user_text}
+
+REGOLE:
+- Rispondi in modo naturale
+- Usa il contesto solo se utile
+- Non ripetere frasi del contesto
+- Se serve, spiega meglio
+"""
+
     try:
-        r = requests.post(url, json=body, timeout=10)
+        answer = ask_gemini(prompt)
 
-        if r.status_code != 200:
-            return base_answer
+        if link:
+            answer += f"\n\n🔗 {link}"
 
-        data = r.json()
+        return answer
 
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        print("AI ERROR:", e)
 
-    except:
-        return base_answer
+        # fallback minimo MA intelligente
+        if context:
+            return context["answer"] + f"\n\n🔗 {context['url']}"
 
-# =====================
-# CHAT ENGINE
-# =====================
-def generate_answer(text, user_id):
+        return "Non riesco a generare risposta al momento."
 
-    item = find_knowledge(text)
-
-    if item:
-        base = item["answer"]
-
-        final = refine_with_gemini(text, base)
-
-        save(user_id, text, final)
-
-        return final + f"\n\n🔗 {item['url']}"
-
-    # fallback intelligente
-    return "Puoi chiedere di proposte, percorsi, analisi o risorse del sito."
-
-# =====================
-# API CHAT
-# =====================
+# =========================
+# API
+# =========================
 @app.route("/chat", methods=["POST"])
 def chat():
 
-    try:
-        data = request.get_json(force=True)
+    data = request.get_json(force=True)
 
-        text = data.get("message", "")
-        user_id = data.get("user_id", "u1")
+    text = data.get("message","")
+    user_id = data.get("user_id","u1")
 
-        if not text.strip():
-            return jsonify({"reply": "Scrivi una domanda"})
+    if not text:
+        return jsonify({"reply":"Scrivi qualcosa"})
 
-        reply = generate_answer(text, user_id)
+    reply = generate(text, user_id)
 
-        return jsonify({"reply": reply})
+    return jsonify({"reply": reply})
 
-    except Exception as e:
-        print("ERROR:", e)
-        return jsonify({"reply": "Errore sistema"}), 200
-
-# =====================
-# HOME
-# =====================
+# =========================
 @app.route("/")
 def home():
-    return "AI SEMANTICA FINALE OK"
+    return "AI SEMANTICA + GEMINI ATTIVA"
 
-# =====================
-# RUN
-# =====================
+# =========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
