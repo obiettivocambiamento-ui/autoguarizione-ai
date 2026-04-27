@@ -1,26 +1,32 @@
 [
   {
-    "id": "home",
-    "title": "Home",
-    "text": "Il sito presenta un percorso di trasformazione personale basato su consapevolezza, osservazione e cambiamento interiore.",
+    "topic": "home",
+    "keywords": ["come funziona", "sito", "cos'è", "autoguarizione"],
+    "answer": "Il sito propone un percorso di consapevolezza e trasformazione personale basato su osservazione, cambiamento e autonomia.",
     "url": "https://www.autoguarizione.it/"
   },
   {
-    "id": "proposte",
-    "title": "Le mie proposte",
-    "text": "Percorsi, strumenti e servizi di crescita personale e consapevolezza.",
+    "topic": "proposte",
+    "keywords": ["proposte", "servizi", "cosa offre", "cosa proponete"],
+    "answer": "Le proposte includono percorsi di crescita personale, strumenti di analisi, contenuti pratici e risorse per migliorare consapevolezza e benessere.",
     "url": "https://www.autoguarizione.it/proposte/"
   },
   {
-    "id": "percorso",
-    "title": "Percorso",
-    "text": "Fasi del percorso: risveglio, osservazione, trasformazione, autonomia.",
+    "topic": "percorsi",
+    "keywords": ["percorso", "cammino", "fasi", "trasformazione"],
+    "answer": "Il percorso è organizzato in fasi: osservazione, consapevolezza, trasformazione, integrazione e autonomia.",
     "url": "https://www.autoguarizione.it/percorso/"
   },
   {
-    "id": "risorse",
-    "title": "Risorse gratuite",
-    "text": "Materiali gratuiti per sviluppo personale e consapevolezza.",
+    "topic": "risorse",
+    "keywords": ["risorse", "gratis", "strumenti", "materiali"],
+    "answer": "Il sito offre risorse gratuite e strumenti pratici per il lavoro personale e la crescita interiore.",
     "url": "https://www.autoguarizione.it/risorse/"
+  },
+  {
+    "topic": "analisi",
+    "keywords": ["analisi", "personalità", "valutazione"],
+    "answer": "L’analisi è un percorso di osservazione di sé e dei propri schemi mentali e comportamentali.",
+    "url": "https://www.autoguarizione.it/analisi/"
   }
 ]

@@ -1,4 +1,5 @@
 import os
+import json
 import sqlite3
 import requests
 from flask import Flask, request, jsonify
@@ -10,7 +11,13 @@ CORS(app)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # =====================
-# DB SQLITE
+# LOAD KNOWLEDGE
+# =====================
+with open("knowledge.json", "r", encoding="utf-8") as f:
+    KNOWLEDGE = json.load(f)
+
+# =====================
+# MEMORY SQLITE
 # =====================
 def init_db():
     conn = sqlite3.connect("memory.db")
@@ -31,67 +38,90 @@ init_db()
 def save(user_id, q, a):
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
-    c.execute("INSERT INTO chat (user_id, q, a) VALUES (?,?,?)",
-              (user_id, q, a))
+    c.execute("INSERT INTO chat (user_id,q,a) VALUES (?,?,?)", (user_id,q,a))
     conn.commit()
     conn.close()
 
 def history(user_id):
     conn = sqlite3.connect("memory.db")
     c = conn.cursor()
-    c.execute("SELECT q,a FROM chat WHERE user_id=? ORDER BY id DESC LIMIT 5", (user_id,))
+    c.execute("SELECT q,a FROM chat WHERE user_id=? ORDER BY id DESC LIMIT 3", (user_id,))
     rows = c.fetchall()
     conn.close()
-
-    return "\n".join([f"U:{q}\nA:{a}" for q,a in reversed(rows)])
+    return " ".join([q+" "+a for q,a in rows])
 
 # =====================
-# GEMINI
+# INTENT MATCHING (SEMANTICO BASE)
 # =====================
-def ask_ai(text, user_id):
+def find_knowledge(text):
+
+    t = text.lower()
+
+    for item in KNOWLEDGE:
+        for k in item["keywords"]:
+            if k in t:
+                return item
+
+    return None
+
+# =====================
+# GEMINI (SOLO REWRITE)
+# =====================
+def refine_with_gemini(text, base_answer):
 
     if not GEMINI_API_KEY:
-        return "API KEY mancante"
+        return base_answer
 
     prompt = f"""
-Sei un assistente chiaro e naturale.
+Rendi questa risposta più naturale e fluida senza cambiare il significato:
 
-STORIA:
-{history(user_id)}
+RISPOSTA BASE:
+{base_answer}
 
-DOMANDA:
+DOMANDA UTENTE:
 {text}
 """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
 
     body = {
-        "contents": [
-            {"parts": [{"text": prompt}]}
-        ]
+        "contents": [{"parts":[{"text":prompt}]}]
     }
 
     try:
-        r = requests.post(url, json=body, timeout=15)
+        r = requests.post(url, json=body, timeout=10)
 
         if r.status_code != 200:
-            print("GEMINI ERROR:", r.text)
-            return "AI temporaneamente non disponibile"
+            return base_answer
 
         data = r.json()
 
-        answer = data["candidates"][0]["content"]["parts"][0]["text"]
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-        save(user_id, text, answer)
-
-        return answer
-
-    except Exception as e:
-        print("ERROR:", e)
-        return "Errore AI"
+    except:
+        return base_answer
 
 # =====================
-# CHAT API (FIX DEFINITIVO)
+# CHAT ENGINE
+# =====================
+def generate_answer(text, user_id):
+
+    item = find_knowledge(text)
+
+    if item:
+        base = item["answer"]
+
+        final = refine_with_gemini(text, base)
+
+        save(user_id, text, final)
+
+        return final + f"\n\n🔗 {item['url']}"
+
+    # fallback intelligente
+    return "Puoi chiedere di proposte, percorsi, analisi o risorse del sito."
+
+# =====================
+# API CHAT
 # =====================
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -102,23 +132,23 @@ def chat():
         text = data.get("message", "")
         user_id = data.get("user_id", "u1")
 
-        if not text:
-            return jsonify({"reply": "Scrivi qualcosa"})
+        if not text.strip():
+            return jsonify({"reply": "Scrivi una domanda"})
 
-        reply = ask_ai(text, user_id)
+        reply = generate_answer(text, user_id)
 
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print("CHAT ERROR:", e)
-        return jsonify({"reply": "Errore server"}), 500
+        print("ERROR:", e)
+        return jsonify({"reply": "Errore sistema"}), 200
 
 # =====================
 # HOME
 # =====================
 @app.route("/")
 def home():
-    return "AI + SQLITE + GEMINI OK"
+    return "AI SEMANTICA FINALE OK"
 
 # =====================
 # RUN
